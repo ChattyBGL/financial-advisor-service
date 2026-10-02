@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -8,13 +9,23 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
+from app.db.session import get_db_client
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    # Startup: open DB pools, warm caches, init clients here.
+    # Startup: the pool is created lazily on first use; log reachability but don't
+    # refuse to boot, so /health still works while the DB is coming up.
+    db = get_db_client()
+    if db.ping():
+        logger.info("Database reachable")
+    else:
+        logger.warning("Database not reachable at startup; /health/ready will report 503")
     yield
-    # Shutdown: close resources here.
+    # Shutdown: return pooled connections.
+    db.dispose()
 
 
 def create_app() -> FastAPI:

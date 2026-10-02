@@ -3,5 +3,8 @@ uvicorn[standard]
 pydantic
 pydantic-settings
 python-dotenv
+sqlalchemy
+psycopg[binary]
+alembic
 groq
 arize-phoenix
