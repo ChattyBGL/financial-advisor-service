@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, SecretStr
@@ -41,6 +42,9 @@ class Settings(BaseSettings):
     groq_model: str = "openai/gpt-oss-120b"
     groq_timeout_seconds: float = 30.0
     groq_max_retries: int = 2
+
+    # Policy PDF used as chat context
+    policy_pdf: Path = Path("data/pdfs/Apex_Financial_Risk_Policy_2026.pdf")
 
     @property
     def database_url(self) -> URL:

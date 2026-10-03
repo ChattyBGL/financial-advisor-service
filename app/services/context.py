@@ -15,6 +15,7 @@ from typing import Any
 
 from app.db.session import get_db_client
 from app.services.client_portfolio import load_client_portfolio
+from app.services.policy import find_policy_context
 
 Client = dict[str, Any]
 Source = Callable[[str, Client | None], Any]
@@ -49,6 +50,9 @@ class ContextService:
 def get_context_service() -> ContextService:
     db = get_db_client()
     return ContextService(
-        sources={"client_portfolio": lambda _prompt, client: client},
+        sources={
+            "client_portfolio": lambda _prompt, client: client,
+            "policy_context": lambda prompt, _client: find_policy_context(prompt),
+        },
         load_client=lambda client_id: load_client_portfolio(db, client_id),
     )
