@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import Settings
 from app.main import create_app
+from app.services.context import ContextService, get_context_service
 from app.services.llm import LLMService, get_llm_service
 
 
@@ -37,6 +38,17 @@ def test_chat_returns_reply(llm_client: TestClient) -> None:
         {"role": "system", "content": "be brief"},
         {"role": "user", "content": "hi"},
     ]
+
+
+def test_context_is_appended_to_system_prompt(llm_client: TestClient) -> None:
+    ctx = ContextService(sources=[lambda prompt: f"fact about '{prompt}'", lambda _: ""])
+    llm_client.app.dependency_overrides[get_context_service] = lambda: ctx  # type: ignore[attr-defined]
+
+    llm_client.post("/api/v1/chat", json={"prompt": "fees", "system": "be brief"})
+
+    messages = llm_client.fake_create.call_args.kwargs["messages"]  # type: ignore[attr-defined]
+    assert messages[0] == {"role": "system", "content": "be brief\n\nContext:\nfact about 'fees'"}
+    assert messages[1] == {"role": "user", "content": "fees"}
 
 
 def test_chat_rejects_empty_prompt(llm_client: TestClient) -> None:
