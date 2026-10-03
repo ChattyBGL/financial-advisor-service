@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -30,7 +31,7 @@ def llm_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 def test_chat_returns_reply(llm_client: TestClient) -> None:
     resp = llm_client.post("/api/v1/chat", json={"prompt": "hi", "system": "be brief"})
     assert resp.status_code == 200
-    assert resp.json() == {"reply": "hello from groq", "model": "test-model"}
+    assert resp.json() == {"reply": "hello from groq", "model": "test-model", "client_name": None}
 
     kwargs = llm_client.fake_create.call_args.kwargs  # type: ignore[attr-defined]
     assert kwargs["model"] == "test-model"
@@ -41,13 +42,26 @@ def test_chat_returns_reply(llm_client: TestClient) -> None:
 
 
 def test_context_is_appended_to_system_prompt(llm_client: TestClient) -> None:
-    ctx = ContextService(sources=[lambda prompt: f"fact about '{prompt}'", lambda _: ""])
+    ctx = ContextService(
+        sources={
+            "facts": lambda prompt, client: {"topic": prompt, "for": client["client_name"]},
+            "empty": lambda _p, _c: None,
+        },
+        load_client=lambda cid: {"client_name": "Ada Lovelace"},
+    )
     llm_client.app.dependency_overrides[get_context_service] = lambda: ctx  # type: ignore[attr-defined]
 
-    llm_client.post("/api/v1/chat", json={"prompt": "fees", "system": "be brief"})
+    resp = llm_client.post(
+        "/api/v1/chat", json={"prompt": "fees", "system": "be brief", "client_id": 7}
+    )
+    assert resp.json()["client_name"] == "Ada Lovelace"
 
     messages = llm_client.fake_create.call_args.kwargs["messages"]  # type: ignore[attr-defined]
-    assert messages[0] == {"role": "system", "content": "be brief\n\nContext:\nfact about 'fees'"}
+    expected_json = json.dumps({"facts": {"topic": "fees", "for": "Ada Lovelace"}}, indent=2)
+    assert messages[0] == {
+        "role": "system",
+        "content": f"be brief\n\nContext (JSON):\n{expected_json}",
+    }
     assert messages[1] == {"role": "user", "content": "fees"}
 
 

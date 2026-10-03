@@ -14,8 +14,10 @@ class ChatRequest(BaseModel):
     history: list[ChatMessage] = Field(default_factory=list)
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
     max_tokens: int | None = Field(default=None, ge=1, le=8192)
+    client_id: int | None = Field(default=None, description="Load this client's profile as context")
 
 
 class ChatResponse(BaseModel):
     reply: str
     model: str
+    client_name: str | None = Field(default=None, description="Resolved from client_id")
