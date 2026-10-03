@@ -9,6 +9,7 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
+from app.core.tracing import configure_tracing
 from app.db.session import get_db_client
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level)
+    configure_tracing(settings)
 
     app = FastAPI(
         title=settings.app_name,

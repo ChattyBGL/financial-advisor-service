@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     groq_timeout_seconds: float = 30.0
     groq_max_retries: int = 2
 
+    # Arize Phoenix tracing (off by default; run `phoenix serve` locally)
+    phoenix_enabled: bool = False
+    phoenix_project: str = "financial-advisor-service"
+    phoenix_collector_endpoint: str = "http://localhost:6006/v1/traces"
+
     # Policy PDF used as chat context
     policy_pdf: Path = Path("data/pdfs/Apex_Financial_Risk_Policy_2026.pdf")
 

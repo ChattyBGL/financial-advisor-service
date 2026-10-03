@@ -10,3 +10,5 @@ pypdf
 ddgs
 groq
 arize-phoenix
+arize-phoenix-otel
+openinference-instrumentation-groq
