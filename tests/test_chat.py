@@ -23,6 +23,10 @@ def llm_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     )
     app = create_app()
     app.dependency_overrides[get_llm_service] = lambda: service
+    # No real sources in unit tests: keeps them offline and deterministic.
+    app.dependency_overrides[get_context_service] = lambda: ContextService(
+        sources={}, load_client=lambda _id: None
+    )
     with TestClient(app) as c:
         c.fake_create = service._client.chat.completions.create  # type: ignore[attr-defined]
         yield c
