@@ -43,3 +43,21 @@ tests/
 
 Add a feature: create `app/api/v1/routes/<name>.py`, define schemas in `app/schemas/`,
 put logic in `app/services/`, and register the router in `app/api/v1/router.py`.
+
+## Run with Docker
+
+Prerequisites: the `datakern-engineering-foundation` compose project (Postgres)
+is running, and `.env` exists with the `DB_*` and `GROQ_API_KEY` values.
+
+```bash
+make up      # builds the image, starts app + Phoenix
+make logs    # follow app logs
+make down
+```
+
+- API docs: http://localhost:8000/docs
+- Phoenix traces: http://localhost:6006
+
+The compose file joins the Postgres project's network and overrides `DB_HOST`
+to `postgres`, and points the app at the Phoenix container. Your `.env` keeps
+`DB_HOST=localhost` for running on the host.

@@ -1,0 +1,37 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      # Pass the key through from the host shell when it isn't in .env.
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      # Inside Docker, reach the sibling containers by service name.
+      DB_HOST: postgres
+      PHOENIX_ENABLED: "true"
+      PHOENIX_COLLECTOR_ENDPOINT: http://phoenix:6006/v1/traces
+    networks:
+      - default
+      - datakern
+    depends_on:
+      - phoenix
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports:
+      - "6006:6006"
+    environment:
+      PHOENIX_WORKING_DIR: /mnt/data
+    volumes:
+      - phoenix-data:/mnt/data
+
+networks:
+  # Postgres is run by the datakern-engineering-foundation compose project;
+  # join its network so `postgres` resolves from the app container.
+  datakern:
+    external: true
+    name: datakern-engineering-foundation_default
+
+volumes:
+  phoenix-data:
