@@ -61,3 +61,29 @@ make down
 The compose file joins the Postgres project's network and overrides `DB_HOST`
 to `postgres`, and points the app at the Phoenix container. Your `.env` keeps
 `DB_HOST=localhost` for running on the host.
+
+## Run on Kubernetes
+
+Manifests live in `k8s/`. Credentials are read from a Secret; everything else
+is plain env on the Deployment. `k8s/phoenix.yaml` runs Phoenix in the cluster
+with a PersistentVolumeClaim for trace storage; the app sends traces to it.
+
+```bash
+# 1. Build the image (same one compose uses) and make it available to your cluster
+docker compose build            # Docker Desktop Kubernetes can use it directly
+# kind load docker-image financial-advisor-service-app:latest   # if using kind
+
+# 2. Create the Secret from your shell (never commit real values)
+kubectl create secret generic financial-advisor-secrets \
+  --from-literal=GROQ_API_KEY="$GROQ_API_KEY" \
+  --from-literal=DB_PASSWORD="$DB_PASSWORD"
+
+# 3. Deploy
+kubectl apply -f k8s/phoenix.yaml -f k8s/deployment.yaml -f k8s/service.yaml
+kubectl port-forward svc/financial-advisor-service 8000:80
+kubectl port-forward svc/phoenix 6006:6006    # Phoenix UI
+```
+
+`DB_HOST` defaults to `host.docker.internal`, which reaches the Postgres
+container on your machine from Docker Desktop Kubernetes. Change it in
+`k8s/deployment.yaml` for any other cluster.

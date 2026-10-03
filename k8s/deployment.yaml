@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: financial-advisor-service
+  labels:
+    app: financial-advisor-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: financial-advisor-service
+  template:
+    metadata:
+      labels:
+        app: financial-advisor-service
+    spec:
+      # See k8s/phoenix.yaml: the injected PHOENIX_PORT service link breaks
+      # the phoenix package the app imports for tracing.
+      enableServiceLinks: false
+      containers:
+        - name: app
+          # Built locally by `docker compose build`; load it into your cluster
+          # (kind load / minikube image load) or use Docker Desktop Kubernetes.
+          image: financial-advisor-service-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            # Credentials come from the Secret (see secret.example.yaml).
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: financial-advisor-secrets
+                  key: GROQ_API_KEY
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: financial-advisor-secrets
+                  key: DB_PASSWORD
+            # Non-secret configuration.
+            - name: DB_HOST
+              # Docker Desktop Kubernetes: reaches the Postgres container on the host.
+              # Replace with your Postgres Service name or address elsewhere.
+              value: host.docker.internal
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: apex_financial
+            - name: DB_USER
+              value: datakernuser
+            - name: GROQ_MODEL
+              value: openai/gpt-oss-120b
+            - name: LOG_LEVEL
+              value: INFO
+            # Traces go to the in-cluster Phoenix (k8s/phoenix.yaml).
+            - name: PHOENIX_ENABLED
+              value: "true"
+            - name: PHOENIX_COLLECTOR_ENDPOINT
+              value: http://phoenix:6006/v1/traces
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
